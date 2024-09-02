@@ -1,8 +1,4 @@
-function main() {
-    console.log("Hello, world!");
-}
-
-let title = document.getElementById("title");
-if (title != null) {
-    title.innerHTML = "Hi, world!";
-}
+let canvas = <HTMLCanvasElement>document.getElementById("canvas")!;
+let ctx = canvas.getContext("2d")!;
+ctx.fillStyle = "#000000";
+ctx.fillRect(0, 0, 150, 150);

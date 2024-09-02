@@ -1,6 +1,5 @@
 {
     "scripts": {
-        "start": "tsc --build . && node dist/index.js",
         "build": "tsc --build",
         "format": "npx prettier . --write"
     },
