@@ -1,6 +1,6 @@
 function resizeCanvas(canvas: HTMLCanvasElement) {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
+    canvas.height = window.innerHeight - 6;
 }
 
 function fullscreen() {

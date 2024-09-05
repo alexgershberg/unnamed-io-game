@@ -12,5 +12,5 @@ body {
 
 canvas {
     display: block;
-    box-shadow: inset 0 0 0 3px #ff0000; /* https://stackoverflow.com/questions/9601357/placing-border-inside-of-div-and-not-on-its-edge */
+    border: 3px solid #ff0000;
 }
