@@ -3,7 +3,7 @@
     "scripts": {
         "build": "npx webpack --config=webpack.config.ts --mode=development",
         "serve": "npx webpack serve --config=webpack.config.ts --mode=development",
-        "format": "npx prettier . --write"
+        "fmt": "npx prettier . --write"
     },
     "devDependencies": {
         "@types/lodash": "^4.17.7",
