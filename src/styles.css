@@ -10,7 +10,17 @@ body {
     overflow: hidden; /* https://stackoverflow.com/questions/28411499/disable-scrolling-on-body */
 }
 
-canvas {
+.canvas {
     display: block;
     border: 3px solid #ff0000;
+    z-index: 0;
+}
+
+.debug-window {
+    z-index: 1;
+    font: 25px Arial;
+    border: 3px solid #ff00ff;
+    position: absolute;
+    top: 0;
+    right: 0;
 }

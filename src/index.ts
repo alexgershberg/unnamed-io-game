@@ -1,4 +1,16 @@
 import "./styles.css";
+import { player } from "./player";
+import {
+    debug1,
+    debug2,
+    debug_text1,
+    debug_text2,
+    debug_textA,
+    debug_textB,
+    debug_textC,
+    debug_textD,
+} from "./debug";
+import { viewport } from "./viewport";
 
 function resizeCanvas(canvas: HTMLCanvasElement) {
     canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
@@ -8,7 +20,7 @@ function resizeCanvas(canvas: HTMLCanvasElement) {
 function toggleFullscreen() {
     // TODO: Handle this
 
-    let canvas = <HTMLCanvasElement>document.getElementById("canvas");
+    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
     if (!document.fullscreenElement) {
         canvas.requestFullscreen().catch((err) => {
             alert(
@@ -20,173 +32,6 @@ function toggleFullscreen() {
     }
 }
 
-class Camera {
-    position: Position = new Position();
-}
-
-class Position {
-    x: number = 0.0;
-    y: number = 0.0;
-}
-
-class Velocity {
-    x: number = 0;
-    y: number = 0;
-
-    decay(rate_of_change: number) {
-        if (this.x > 0) {
-            let new_x = this.x - rate_of_change;
-            this.x = new_x >= 0 ? new_x : 0;
-        }
-
-        if (this.x < 0) {
-            let new_x = this.x + rate_of_change;
-            this.x = new_x <= 0 ? new_x : 0;
-        }
-
-        if (this.y > 0) {
-            let new_y = this.y - rate_of_change;
-            this.y = new_y >= 0 ? new_y : 0;
-        }
-
-        if (this.y < 0) {
-            let new_y = this.y + rate_of_change;
-            this.y = new_y <= 0 ? new_y : 0;
-        }
-    }
-
-    grow(
-        direction: "up" | "left" | "right" | "down",
-        rate_of_change: number,
-        max: number,
-    ) {
-        switch (direction) {
-            case "up":
-                let uy = this.y + rate_of_change;
-                this.y = uy >= max ? max : uy;
-                break;
-            case "left":
-                let lx = this.x - rate_of_change;
-                console.log(`lx: ${lx}`);
-                this.x = lx <= -max ? -max : lx;
-                break;
-            case "right":
-                let rx = this.x + rate_of_change;
-                console.log(`rx: ${rx}`);
-                this.x = rx >= max ? max : rx;
-                break;
-            case "down":
-                let dy = this.y - rate_of_change;
-                this.y = dy <= -max ? -max : dy;
-                break;
-        }
-    }
-}
-
-class Player {
-    color = `#000000`;
-    position: Position = new Position();
-    velocity = new Velocity();
-    max_speed = 150.0;
-    acceleration = 20;
-    friction = 0.1;
-
-    moveUp() {
-        this.velocity.grow("up", this.acceleration, this.max_speed);
-    }
-
-    moveLeft() {
-        this.velocity.grow("left", this.acceleration, this.max_speed);
-    }
-
-    moveRight() {
-        this.velocity.grow("right", this.acceleration, this.max_speed);
-    }
-
-    moveDown() {
-        this.velocity.grow("down", this.acceleration, this.max_speed);
-    }
-
-    resetVelocity() {
-        this.velocity = new Velocity();
-    }
-
-    updateVelocity() {
-        if (keyboardDirection.up) {
-            this.moveUp();
-        }
-
-        if (keyboardDirection.left) {
-            this.moveLeft();
-        }
-
-        if (keyboardDirection.right) {
-            this.moveRight();
-        }
-
-        if (keyboardDirection.down) {
-            this.moveDown();
-        }
-    }
-
-    updatePosition() {
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
-    }
-
-    input() {
-        this.updateVelocity();
-    }
-
-    draw(extrapolation: number) {
-        let canvas = <HTMLCanvasElement>document.getElementById("canvas");
-        let x = this.position.x;
-        let y = this.position.y;
-
-        let extrapolated_x =
-            ((x + this.velocity.x * extrapolation) / canvas.width) * 2;
-        let extrapolated_y =
-            ((-1 * (y + this.velocity.y * extrapolation)) / canvas.height) * 2;
-
-        // let extrapolated_x = x / canvas.width;
-        // let extrapolated_y = (-1 * y) / canvas.height;
-
-        debugC(`extr: x: ${extrapolated_x.toFixed(2)}`);
-        debugD(`extr: y: ${extrapolated_y.toFixed(2)}`);
-
-        let radius = 25;
-        let ctx = canvas.getContext("2d")!;
-        ctx.beginPath();
-        ctx.arc(
-            canvas.width * extrapolated_x + canvas.width / 2,
-            canvas.height * extrapolated_y + canvas.height / 2,
-            radius,
-            0,
-            Math.PI * 2,
-            false,
-        );
-        ctx.fillStyle = player.color;
-        ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = "#FF0000";
-        ctx.stroke();
-    }
-
-    tick() {
-        player.color = `#00FF00`;
-
-        this.velocity.decay(this.friction); // TODO: you have no conservation of momentum, dimwit
-        this.updatePosition();
-
-        let { x, y } = this.velocity;
-        debugA(`x force: ${x}`);
-        debugB(`y force: ${y}`);
-    }
-}
-
-const player = new Player();
-const keyboardDirection = { up: false, left: false, right: false, down: false };
-
 function keyDownHandler(event: KeyboardEvent) {
     switch (event.key) {
         case "O":
@@ -195,22 +40,22 @@ function keyDownHandler(event: KeyboardEvent) {
 
         case "W":
         case "w":
-            keyboardDirection.up = true;
+            player.keyboardDirection.up = true;
             break;
 
         case "A":
         case "a":
-            keyboardDirection.left = true;
+            player.keyboardDirection.left = true;
             break;
 
         case "D":
         case "d":
-            keyboardDirection.right = true;
+            player.keyboardDirection.right = true;
             break;
 
         case "S":
         case "s":
-            keyboardDirection.down = true;
+            player.keyboardDirection.down = true;
             break;
     }
     if (event.key === "O") {
@@ -222,64 +67,34 @@ function keyUpHandler(event: KeyboardEvent) {
     switch (event.key) {
         case "W":
         case "w":
-            keyboardDirection.up = false;
+            player.keyboardDirection.up = false;
             break;
 
         case "A":
         case "a":
-            keyboardDirection.left = false;
+            player.keyboardDirection.left = false;
             break;
 
         case "D":
         case "d":
-            keyboardDirection.right = false;
+            player.keyboardDirection.right = false;
             break;
 
         case "S":
         case "s":
-            keyboardDirection.down = false;
+            player.keyboardDirection.down = false;
             break;
     }
 }
 
 function clearCanvas() {
-    let canvas = <HTMLCanvasElement>document.getElementById("canvas");
+    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
     let ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-let debug_text1 = "";
-function debug1(text: string) {
-    debug_text1 = text;
-}
-
-let debug_text2 = "";
-function debug2(text: string) {
-    debug_text2 = text;
-}
-
-let debug_textA = "";
-function debugA(text: string) {
-    debug_textA = text;
-}
-
-let debug_textB = "";
-function debugB(text: string) {
-    debug_textB = text;
-}
-
-let debug_textC = "";
-function debugC(text: string) {
-    debug_textC = text;
-}
-
-let debug_textD = "";
-function debugD(text: string) {
-    debug_textD = text;
-}
-
 function drawElements() {
-    let canvas = <HTMLCanvasElement>document.getElementById("canvas");
+    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
     let ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#000000";
     ctx.font = "25px Arial";
@@ -306,7 +121,8 @@ function render(extrapolation: number) {
 
     clearCanvas();
     drawElements();
-    player.draw(extrapolation);
+    viewport.render(extrapolation);
+
     render_old = render_current;
 }
 
@@ -350,7 +166,7 @@ function gameLoop() {
 }
 
 function main() {
-    let canvas = <HTMLCanvasElement>document.getElementById("canvas")!;
+    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas")!;
     window.addEventListener("resize", () => {
         resizeCanvas(canvas);
     });
