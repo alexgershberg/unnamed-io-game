@@ -3,7 +3,6 @@ import "./styles.css";
 function resizeCanvas(canvas: HTMLCanvasElement) {
     canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
     canvas.height = window.innerHeight - 6;
-    gameLoop().then();
 }
 
 function toggleFullscreen() {
@@ -21,12 +20,6 @@ function toggleFullscreen() {
     }
 }
 
-function drawElements(canvas: HTMLCanvasElement) {
-    let ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, 150, 150);
-}
-
 class Position {
     x: number = 50;
     y: number = 50;
@@ -34,7 +27,7 @@ class Position {
 
 class Player {
     position: Position = new Position();
-    step = 1;
+    step = 5;
 
     moveUp() {
         this.position.y += this.step;
@@ -71,19 +64,23 @@ class Player {
     }
 
     draw() {
+        let radius = 25;
         let canvas = <HTMLCanvasElement>document.getElementById("canvas");
         let ctx = canvas.getContext("2d")!;
         ctx.beginPath();
         ctx.arc(
             this.position.x,
             canvas.height - player.position.y,
-            4,
+            radius,
             0,
             Math.PI * 2,
             false,
         );
-        ctx.fillStyle = "#00FF00";
+        ctx.fillStyle = "#000000";
         ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#FF0000";
+        ctx.stroke();
     }
 }
 
@@ -151,13 +148,50 @@ function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function render() {
+let debug_text1 = "";
+function debug1(text: string) {
+    debug_text1 = text;
+}
+
+let debug_text2 = "";
+function debug2(text: string) {
+    debug_text2 = text;
+}
+
+function drawElements() {
+    let canvas = <HTMLCanvasElement>document.getElementById("canvas");
+    let ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#000000";
+    ctx.font = "25px Arial";
+    ctx.fillText(debug_text1, 10, 25);
+    ctx.fillText(debug_text2, 10, 55);
+}
+
+let render_old = window.performance.now();
+function render(extrapolation: number) {
+    // TODO: Handle extrapolated position
+
+    let render_current = window.performance.now();
+    let render_elapsed = (render_current - render_old) / 1000;
+    render_old = render_current;
+
+    let fps = Math.round(1 / render_elapsed);
+    debug1(`FPS: ${fps}`);
+
     clearCanvas();
+    drawElements();
     player.draw();
 }
 
-// 20 tps
+let tick_old = window.performance.now();
 function tick() {
+    let tick_current = window.performance.now();
+    let tick_elapsed = (tick_current - tick_old) / 1000;
+    tick_old = tick_current;
+
+    let tps = Math.round(1 / tick_elapsed);
+    debug2(`TPS: ${tps}`);
+
     player.updatePosition();
 }
 
@@ -165,12 +199,24 @@ function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let previous = window.performance.now();
+let lag = 0.0;
 async function gameLoop() {
-    while (true) {
-        render();
+    const TPS = 20;
+    const MS_PER_TICK = (1 / TPS) * 1000;
+
+    let current = window.performance.now();
+    let elapsed = current - previous;
+    previous = current;
+    lag += elapsed;
+
+    while (lag >= MS_PER_TICK) {
         tick();
-        await delay(5);
+        lag -= MS_PER_TICK;
     }
+
+    render(lag / MS_PER_TICK);
+    window.requestAnimationFrame(gameLoop);
 }
 
 function main() {
@@ -183,6 +229,8 @@ function main() {
     window.addEventListener("keyup", keyUpHandler);
 
     resizeCanvas(canvas);
+
+    window.requestAnimationFrame(gameLoop);
 }
 
-main();
+window.onload = main;
