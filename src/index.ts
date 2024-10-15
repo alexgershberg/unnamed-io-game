@@ -135,6 +135,7 @@ function tick() {
     debug2(`TPS: ${tps}`);
 
     player.tick();
+
     tick_old = tick_current;
 }
 
