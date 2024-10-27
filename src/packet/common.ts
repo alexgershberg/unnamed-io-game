@@ -1,11 +1,12 @@
 export interface ToBytes {
-    to_bytes(): Uint8Array;
-}
-
-export enum PacketType {
-    Movement = 2,
+    toBytes(): Uint8Array;
 }
 
 export interface Packet extends ToBytes {
-    packet_type: PacketType;
+    packetId(): PacketId;
+}
+
+export enum PacketId {
+    Sync = 1,
+    Movement = 2,
 }

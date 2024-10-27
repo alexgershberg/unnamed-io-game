@@ -1,5 +1,4 @@
 import "./styles.css";
-import { player } from "./player";
 import {
     debug1,
     debug2,
@@ -33,10 +32,14 @@ function toggleFullscreen() {
 }
 
 function keyDownHandler(event: KeyboardEvent) {
+    if (event.repeat) {
+        return;
+    }
+
     switch (event.key) {
         case "O":
             toggleFullscreen();
-            break;
+            return;
 
         case "W":
         case "w":
@@ -58,12 +61,15 @@ function keyDownHandler(event: KeyboardEvent) {
             player.keyboardDirection.down = true;
             break;
     }
-    if (event.key === "O") {
-        toggleFullscreen();
-    }
+
+    player.sendInput();
 }
 
 function keyUpHandler(event: KeyboardEvent) {
+    if (event.repeat) {
+        return;
+    }
+
     switch (event.key) {
         case "W":
         case "w":
@@ -85,6 +91,8 @@ function keyUpHandler(event: KeyboardEvent) {
             player.keyboardDirection.down = false;
             break;
     }
+
+    player.sendInput();
 }
 
 function clearCanvas() {
@@ -105,10 +113,6 @@ function drawElements() {
     ctx.fillText(debug_textB, 10, 115);
     ctx.fillText(debug_textC, 10, 145);
     ctx.fillText(debug_textD, 10, 175);
-}
-
-function input() {
-    player.input();
 }
 
 let render_old = window.performance.now();
@@ -134,8 +138,6 @@ function tick() {
     let tps = Math.round(1 / tick_elapsed);
     debug2(`TPS: ${tps}`);
 
-    player.tick();
-
     tick_old = tick_current;
 }
 
@@ -146,7 +148,7 @@ function delay(ms: number) {
 let previous = window.performance.now();
 let lag = 0.0;
 function gameLoop() {
-    player.color = `#000000`;
+    // player.color = `#000000`;
 
     const TPS = 0.5;
     const MS_PER_TICK = (1 / TPS) * 1000;
@@ -156,9 +158,8 @@ function gameLoop() {
     previous = current;
     lag += elapsed;
 
-    input();
     while (lag >= MS_PER_TICK) {
-        tick();
+        // tick();
         lag -= MS_PER_TICK;
     }
 
@@ -177,7 +178,7 @@ function main() {
 
     resizeCanvas(canvas);
 
-    tick(); // Tick once to initialize the game
+    // tick(); // Tick once to initialize the game
 
     window.requestAnimationFrame(gameLoop);
 }

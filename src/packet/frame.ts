@@ -1,18 +1,31 @@
-import { Id } from "./id";
-import { Packet, ToBytes } from "./common";
+import { Packet, PacketId, ToBytes } from "./common";
+import { MovementPacket } from "./movement";
+import { SyncPacket } from "./sync";
 
 export class Frame implements ToBytes {
-    id: Id;
     packet: Packet;
 
-    constructor(id: Id, packet: Packet) {
-        this.id = id;
+    constructor(packet: Packet) {
         this.packet = packet;
     }
 
-    to_bytes(): Uint8Array {
-        let id = this.id.to_bytes();
-        let packet = this.packet.to_bytes();
-        return new Uint8Array([...id, ...packet]);
+    toBytes(): Uint8Array {
+        let packet = this.packet.toBytes();
+        let packetId = this.packet.packetId();
+
+        return new Uint8Array([packetId, ...packet]);
+    }
+
+    static fromBytes(bytes: Uint8Array): Frame {
+        let packetId = bytes[0] as PacketId;
+
+        let packet;
+        if (packetId == PacketId.Movement) {
+            packet = MovementPacket.fromBytes(bytes.slice(1));
+        } else {
+            packet = SyncPacket.fromBytes(bytes.slice(1));
+        }
+
+        return new Frame(packet);
     }
 }
