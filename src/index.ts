@@ -9,7 +9,10 @@ import {
     debug_textC,
     debug_textD,
 } from "./debug";
-import { viewport } from "./viewport";
+import { Player } from "./entities/player";
+// import { viewport } from "./viewport";
+
+let player = new Player();
 
 function resizeCanvas(canvas: HTMLCanvasElement) {
     canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
@@ -29,70 +32,6 @@ function toggleFullscreen() {
     } else {
         document.exitFullscreen();
     }
-}
-
-function keyDownHandler(event: KeyboardEvent) {
-    if (event.repeat) {
-        return;
-    }
-
-    switch (event.key) {
-        case "O":
-            toggleFullscreen();
-            return;
-
-        case "W":
-        case "w":
-            player.keyboardDirection.up = true;
-            break;
-
-        case "A":
-        case "a":
-            player.keyboardDirection.left = true;
-            break;
-
-        case "D":
-        case "d":
-            player.keyboardDirection.right = true;
-            break;
-
-        case "S":
-        case "s":
-            player.keyboardDirection.down = true;
-            break;
-    }
-
-    player.sendInput();
-}
-
-function keyUpHandler(event: KeyboardEvent) {
-    if (event.repeat) {
-        return;
-    }
-
-    switch (event.key) {
-        case "W":
-        case "w":
-            player.keyboardDirection.up = false;
-            break;
-
-        case "A":
-        case "a":
-            player.keyboardDirection.left = false;
-            break;
-
-        case "D":
-        case "d":
-            player.keyboardDirection.right = false;
-            break;
-
-        case "S":
-        case "s":
-            player.keyboardDirection.down = false;
-            break;
-    }
-
-    player.sendInput();
 }
 
 function clearCanvas() {
@@ -115,6 +54,31 @@ function drawElements() {
     ctx.fillText(debug_textD, 10, 175);
 }
 
+/*
+      20 tps -> 50ms per tick
+
+       50ms  50ms  50ms  50ms
+      0     1     2     3     4
+  T   |     |     |     |     |
+  R   | | | | | | | | | | | | |
+      0 1 2 3 4 5 6 7 8 9 1 1 1
+                          0 1 2
+
+
+ */
+
+const TPS = 2.0;
+
+let last_tick = window.performance.now();
+let tolerance = 1 / TPS;
+export const reset_last_tick = () => {
+    last_tick = window.performance.now();
+};
+export const since_last_tick = () => {
+    let now = window.performance.now();
+    return (now - last_tick) / 1000;
+};
+
 let render_old = window.performance.now();
 function render(extrapolation: number) {
     let render_current = window.performance.now();
@@ -122,10 +86,11 @@ function render(extrapolation: number) {
 
     let fps = Math.round(1 / render_elapsed);
     debug1(`FPS: ${fps}`);
+    debug2(`extrapolation: ${extrapolation}`);
 
     clearCanvas();
     drawElements();
-    viewport.render(extrapolation);
+    player.render(extrapolation);
 
     render_old = render_current;
 }
@@ -145,25 +110,13 @@ function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-let previous = window.performance.now();
-let lag = 0.0;
 function gameLoop() {
-    // player.color = `#000000`;
-
-    const TPS = 0.5;
-    const MS_PER_TICK = (1 / TPS) * 1000;
-
-    let current = window.performance.now();
-    let elapsed = current - previous;
-    previous = current;
-    lag += elapsed;
-
-    while (lag >= MS_PER_TICK) {
-        // tick();
-        lag -= MS_PER_TICK;
+    let extrapolation = since_last_tick();
+    if (extrapolation >= tolerance) {
+        extrapolation = tolerance;
     }
 
-    render(lag / MS_PER_TICK);
+    render(extrapolation);
     window.requestAnimationFrame(gameLoop);
 }
 
@@ -173,13 +126,7 @@ function main() {
         resizeCanvas(canvas);
     });
 
-    window.addEventListener("keydown", keyDownHandler);
-    window.addEventListener("keyup", keyUpHandler);
-
     resizeCanvas(canvas);
-
-    // tick(); // Tick once to initialize the game
-
     window.requestAnimationFrame(gameLoop);
 }
 

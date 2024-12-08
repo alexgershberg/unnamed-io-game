@@ -9,4 +9,5 @@ export interface Packet extends ToBytes {
 export enum PacketId {
     Sync = 1,
     Movement = 2,
+    All = 3,
 }

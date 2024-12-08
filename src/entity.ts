@@ -1,7 +1,6 @@
 import { Position } from "./position";
 
-export interface Element {
+export interface Entity {
     position: Position;
     render(extrapolation: number): void;
-    tick(): void;
 }

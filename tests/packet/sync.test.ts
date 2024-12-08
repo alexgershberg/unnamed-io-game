@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { SyncPacket } from "../../src/packet/sync";
 import { Id } from "../../src/packet/id";
 import { Position } from "../../src/position";
-import { Velocity } from "../../src/player";
+import { Velocity } from "../../src/entities/player";
 
 test("SyncPacket.fromBytes()", () => {
     let bytes = new Uint8Array([
@@ -11,6 +11,8 @@ test("SyncPacket.fromBytes()", () => {
     ]);
     let sync_packet = SyncPacket.fromBytes(bytes);
     expect(sync_packet.id).toEqual(new Id(11));
-    expect(sync_packet.position).toEqual(new Position(2512.800048828125, -451.20001220703125));
+    expect(sync_packet.position).toEqual(
+        new Position(2512.800048828125, -451.20001220703125),
+    );
     expect(sync_packet.velocity).toEqual(new Velocity(10.0, -5.0));
 });

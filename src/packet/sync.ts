@@ -1,7 +1,7 @@
 import { Packet, PacketId } from "./common";
 import { Id } from "./id";
 import { Position } from "../position";
-import { Velocity } from "../player";
+import { Velocity } from "../entities/player";
 
 export class SyncPacket implements Packet {
     id = new Id(0);
