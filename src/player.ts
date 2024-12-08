@@ -1,8 +1,6 @@
-import { Entity } from "../entity";
-import { Position } from "../position";
-import { debugA, debugB, debugC, debugD } from "../debug";
-import { reset_last_tick } from "../index";
-import { some } from "lodash";
+import { Position } from "./position";
+import { debugA, debugB, debugC, debugD } from "./debug";
+import { reset_last_tick } from "./index";
 
 class KeyboardDirection {
     up = false;
@@ -19,19 +17,9 @@ export class Velocity {
         this.x = x;
         this.y = y;
     }
-
-    static fromBytes(bytes: Uint8Array): Velocity {
-        let x_data = new DataView(bytes.slice(0, 4).buffer);
-        let x = x_data.getFloat32(0, false);
-
-        let y_data = new DataView(bytes.slice(4, 8).buffer);
-        let y = y_data.getFloat32(0, false);
-
-        return { x, y };
-    }
 }
 
-export class Player implements Entity {
+export class Player {
     websocket: WebSocket;
     color = `#000000`;
     position: Position = new Position();

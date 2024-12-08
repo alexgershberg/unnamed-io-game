@@ -9,8 +9,7 @@ import {
     debug_textC,
     debug_textD,
 } from "./debug";
-import { Player } from "./entities/player";
-// import { viewport } from "./viewport";
+import { Player } from "./player";
 
 let player = new Player();
 
@@ -53,19 +52,6 @@ function drawElements() {
     ctx.fillText(debug_textC, 10, 145);
     ctx.fillText(debug_textD, 10, 175);
 }
-
-/*
-      20 tps -> 50ms per tick
-
-       50ms  50ms  50ms  50ms
-      0     1     2     3     4
-  T   |     |     |     |     |
-  R   | | | | | | | | | | | | |
-      0 1 2 3 4 5 6 7 8 9 1 1 1
-                          0 1 2
-
-
- */
 
 const TPS = 2.0;
 
