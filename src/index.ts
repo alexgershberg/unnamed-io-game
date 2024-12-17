@@ -57,11 +57,11 @@ function createGrid(width: number, height: number): HTMLCanvasElement {
     dot(canvas, -max, max, 3);
     dot(canvas, -max, -max, 3);
 
-    let cell = 30;
+    let cell = 15;
     let cell_count = (max * 2) / cell;
     grid(canvas, cell_count, cell_count, cell);
     dot(canvas, 0, 0, 3);
-    let notch_len = cell / 3;
+    let notch_len = cell / 2;
 
     let notch_count = cell_count / 2;
     for (let x = 1; x <= notch_count; x += 1) {
@@ -89,7 +89,6 @@ function line(x: number, y: number) {
     let x_offset = x - camera.x;
     let y_offset = -1 * (y - camera.y);
 
-    console.log(`${x_offset} | ${y_offset}`);
     let length = 200;
     let x_center = x_offset + canvas.width / 2;
     let y_center = y_offset + canvas.height / 2;
@@ -106,7 +105,7 @@ function box(canvas: HTMLCanvasElement, x: number, y: number, length: number) {
     let ctx = canvas.getContext("2d")!;
     let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
 
-    ctx.lineWidth = 0.2;
+    ctx.lineWidth = 0.15;
     ctx.strokeStyle = "lightgray";
 
     ctx.beginPath();
@@ -174,7 +173,7 @@ function notch_x(
     let ctx = canvas.getContext("2d")!;
     let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.strokeStyle = "#FF0000";
 
     ctx.beginPath();
@@ -192,7 +191,7 @@ function notch_y(
     let ctx = canvas.getContext("2d")!;
     let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.strokeStyle = "#FF0000";
 
     ctx.beginPath();
@@ -245,12 +244,13 @@ export const since_last_tick = () => {
 };
 
 let render_old = window.performance.now();
+export let FPS = 0;
 function render(extrapolation: number) {
     let render_current = window.performance.now();
     let render_elapsed = (render_current - render_old) / 1000;
 
-    let fps = Math.round(1 / render_elapsed);
-    debug1(`FPS: ${fps}`);
+    FPS = Math.round(1 / render_elapsed);
+    debug1(`FPS: ${FPS}`);
     debug2(`extrapolation: ${extrapolation}`);
     debugA(`tolerance: ${tolerance}`);
 
@@ -301,11 +301,10 @@ function gameLoop() {
     window.requestAnimationFrame(gameLoop);
 }
 
-// let local_player = new Player();
 let players: any = {};
 let websocket: WebSocket | null = null;
 export let camera: Position = new Position();
-export let orientation: number;
+export let orientation: number = 0;
 function connect(address: string) {
     websocket = new WebSocket(address);
     websocket.binaryType = "arraybuffer";
@@ -340,22 +339,33 @@ function connect(address: string) {
 export let own_id: number = -1;
 function handleHandshake(id: number) {
     own_id = id;
-    // players[own_id] = local_player
 }
 
-function handlePlayers(plrs: Player[]) {
+function handlePlayers(plrs: any[]) {
+    // console.log("got players")
     for (let p of plrs) {
-        let player = new Player();
-        player.id = p.id;
-        player.position = p.position;
-        player.velocity = p.velocity;
-        if (player.id === own_id) {
-            player.color = "#0099FF";
-            camera = player.position;
-            // local_player = player;
+        let player;
+        let new_player = !players[p.id];
+        if (new_player) {
+            player = new Player();
+            players[p.id] = player;
+            player.draw_position = p.position;
+        } else {
+            player = players[p.id];
         }
 
-        players[p.id] = player;
+        player.id = p.id;
+        player.server_position = p.position;
+        player.velocity = p.velocity;
+
+        if (player.id === own_id) {
+            player.color = "#0099FF";
+            // camera = player.draw_position;
+        } else {
+            player.color = "#FF9900";
+        }
+
+        player.tick();
     }
 }
 
@@ -375,7 +385,6 @@ class KeyboardDirection {
 let keyboardDirection = new KeyboardDirection();
 function sendInput() {
     if (websocket) {
-        console.log(keyboardDirection);
         websocket.send(JSON.stringify(keyboardDirection));
     }
 }
