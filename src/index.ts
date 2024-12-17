@@ -13,9 +13,12 @@ import {
 import { Player } from "./player";
 import { Position } from "./position";
 
+let off_canvas: HTMLCanvasElement | null;
 function resizeCanvas(canvas: HTMLCanvasElement) {
     canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
     canvas.height = window.innerHeight - 6;
+
+    off_canvas = createGrid(canvas.width * 3, canvas.height * 3);
 }
 
 function toggleFullscreen() {
@@ -33,15 +36,51 @@ function toggleFullscreen() {
     }
 }
 
-function clearCanvas() {
-    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
-    let ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function clearCanvas(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+) {
+    ctx.clearRect(0, 0, width, height);
 }
 
-function drawGrid() {
-    grid(20, 20, 125);
-    dot(0, 0, 3);
+function createGrid(width: number, height: number): HTMLCanvasElement {
+    let canvas = <HTMLCanvasElement>document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    let max = 990;
+
+    // Border
+    dot(canvas, max, max, 3);
+    dot(canvas, max, -max, 3);
+    dot(canvas, -max, max, 3);
+    dot(canvas, -max, -max, 3);
+
+    let cell = 30;
+    let cell_count = (max * 2) / cell;
+    grid(canvas, cell_count, cell_count, cell);
+    dot(canvas, 0, 0, 3);
+    let notch_len = cell / 3;
+
+    let notch_count = cell_count / 2;
+    for (let x = 1; x <= notch_count; x += 1) {
+        notch_x(canvas, x * cell, 0, notch_len);
+    }
+
+    for (let x = -1; x >= -notch_count; x -= 1) {
+        notch_x(canvas, x * cell, 0, notch_len);
+    }
+
+    for (let y = 1; y <= notch_count; y += 1) {
+        notch_y(canvas, 0, y * cell, notch_len);
+    }
+
+    for (let y = -1; y >= -notch_count; y -= 1) {
+        notch_y(canvas, 0, y * cell, notch_len);
+    }
+
+    return canvas;
 }
 
 function line(x: number, y: number) {
@@ -63,13 +102,13 @@ function line(x: number, y: number) {
     ctx.stroke();
 }
 
-function box(x: number, y: number, length: number) {
-    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
+function box(canvas: HTMLCanvasElement, x: number, y: number, length: number) {
     let ctx = canvas.getContext("2d")!;
-    let [x_translated, y_translated] = world_to_canvas_coords(x, y);
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 0.2;
     ctx.strokeStyle = "lightgray";
+
     ctx.beginPath();
     ctx.moveTo(x_translated - length / 2, y_translated + length / 2);
     ctx.lineTo(x_translated + length / 2, y_translated + length / 2);
@@ -79,37 +118,103 @@ function box(x: number, y: number, length: number) {
     ctx.stroke();
 }
 
-function grid(rows: number, cols: number, cell: number) {
+function grid(
+    canvas: HTMLCanvasElement,
+    rows: number,
+    cols: number,
+    cell: number,
+) {
     let left = -(cell * cols) / 2 + cell / 2;
     let bot = -(cell * rows) / 2 + cell / 2;
 
     for (let x = left; x < (cell * cols) / 2; x += cell) {
         for (let y = bot; y < (cell * rows) / 2; y += cell) {
-            box(x, y, cell);
+            box(canvas, x, y, cell);
         }
     }
 }
 
-function dot(x: number, y: number, radius: number) {
-    let [x_translated, y_translated] = world_to_canvas_coords(x, y);
-    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
+function dotgrid(
+    canvas: HTMLCanvasElement,
+    rows: number,
+    cols: number,
+    radius: number,
+    padding: number,
+) {
+    let cell = radius + padding;
+
+    let left = -(cell * cols) / 2 + cell / 2;
+    let bot = -(cell * rows) / 2 + cell / 2;
+
+    for (let x = left; x < (cell * cols) / 2; x += cell) {
+        for (let y = bot; y < (cell * rows) / 2; y += cell) {
+            dot(canvas, x, y, radius);
+        }
+    }
+}
+
+function dot(canvas: HTMLCanvasElement, x: number, y: number, radius: number) {
     let ctx = canvas.getContext("2d")!;
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
+
+    ctx.fillStyle = "#FF0000";
+
     ctx.beginPath();
     ctx.arc(x_translated, y_translated, radius, 0, Math.PI * 2, false);
-    ctx.fillStyle = "#FF0000";
     ctx.fill();
     ctx.closePath();
 }
 
-function world_to_canvas_coords(x: number, y: number): [number, number] {
-    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
-    let x_offset = x - camera.x;
-    let y_offset = -1 * (y - camera.y);
+function notch_x(
+    canvas: HTMLCanvasElement,
+    x: number,
+    y: number,
+    length: number,
+) {
+    let ctx = canvas.getContext("2d")!;
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
 
-    let x_translated = x_offset + canvas.width / 2;
-    let y_translated = y_offset + canvas.height / 2;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#FF0000";
 
-    return [x_translated, y_translated];
+    ctx.beginPath();
+    ctx.moveTo(x_translated, y_translated - length / 2);
+    ctx.lineTo(x_translated, y_translated + length / 2);
+    ctx.stroke();
+}
+
+function notch_y(
+    canvas: HTMLCanvasElement,
+    x: number,
+    y: number,
+    length: number,
+) {
+    let ctx = canvas.getContext("2d")!;
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#FF0000";
+
+    ctx.beginPath();
+    ctx.moveTo(x_translated - length / 2, y_translated);
+    ctx.lineTo(x_translated + length / 2, y_translated);
+    ctx.stroke();
+}
+
+function world_to_canvas_coords(
+    canvas: HTMLCanvasElement,
+    x: number,
+    y: number,
+): [number, number] {
+    // let x_offset = x - camera.x;
+    // let y_offset = -1 * (y - camera.y);
+    //
+    // let x_translated = x_offset + canvas.width / 2;
+    // let y_translated = y_offset + canvas.height / 2;
+    //
+    // return [x_translated, y_translated];
+
+    return [x + canvas.width / 2, y + canvas.height / 2];
 }
 
 function drawDebug() {
@@ -149,8 +254,19 @@ function render(extrapolation: number) {
     debug2(`extrapolation: ${extrapolation}`);
     debugA(`tolerance: ${tolerance}`);
 
-    clearCanvas();
-    drawGrid();
+    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
+    let ctx = canvas.getContext("2d")!;
+    clearCanvas(ctx, canvas.width, canvas.height);
+    if (off_canvas) {
+        let x_mid = canvas.width / 2;
+        let y_mid = canvas.height / 2;
+
+        ctx.drawImage(
+            off_canvas,
+            x_mid - off_canvas.width / 2 - camera.x,
+            y_mid - off_canvas.height / 2 + camera.y,
+        );
+    }
     drawDebug();
     for (const [id, player] of Object.entries(players)) {
         // @ts-ignore
@@ -189,6 +305,7 @@ function gameLoop() {
 let players: any = {};
 let websocket: WebSocket | null = null;
 export let camera: Position = new Position();
+export let orientation: number;
 function connect(address: string) {
     websocket = new WebSocket(address);
     websocket.binaryType = "arraybuffer";
@@ -233,7 +350,7 @@ function handlePlayers(plrs: Player[]) {
         player.position = p.position;
         player.velocity = p.velocity;
         if (player.id === own_id) {
-            player.color = `#FF0000`;
+            player.color = "#0099FF";
             camera = player.position;
             // local_player = player;
         }
@@ -258,6 +375,7 @@ class KeyboardDirection {
 let keyboardDirection = new KeyboardDirection();
 function sendInput() {
     if (websocket) {
+        console.log(keyboardDirection);
         websocket.send(JSON.stringify(keyboardDirection));
     }
 }
@@ -335,6 +453,7 @@ function keyUpHandler(event: KeyboardEvent) {
 
 function main() {
     let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas")!;
+
     window.addEventListener("resize", () => {
         resizeCanvas(canvas);
     });
@@ -347,5 +466,15 @@ function main() {
 
     window.requestAnimationFrame(gameLoop);
 }
+
+onmousemove = (event) => {
+    let height = window.innerHeight;
+    let width = window.innerWidth;
+
+    let x = event.x - width / 2;
+    let y = -1 * (event.y - height / 2);
+
+    orientation = Math.atan(y / x);
+};
 
 window.onload = main;

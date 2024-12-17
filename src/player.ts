@@ -1,6 +1,5 @@
 import { Position } from "./position";
-import { camera, own_id } from "./index";
-import { debug_textA, debugA, debugB, debugC, debugD } from "./debug";
+import { camera, orientation, own_id } from "./index";
 
 export class Velocity {
     x: number;
@@ -17,64 +16,105 @@ export class Player {
     id: number = -1;
     position: Position = new Position();
     velocity = new Velocity();
+    orientation: number = 0;
 
     constructor() {}
 
     render(extrapolation: number): void {
         let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
-        let x_offset = this.velocity.x * extrapolation;
-        let y_offset = this.velocity.y * extrapolation;
-        let x = this.position.x - camera.x;
-        let y = this.position.y - camera.y;
-        // let x = this.position.x;
-        // let y = this.position.y;
 
-        let extrapolated_x = x + x_offset;
-        let extrapolated_y = -1 * (y + y_offset);
+        player(this, canvas);
 
-        if (this.id === own_id) {
-            // Don't extrapolate self
-            extrapolated_x = x;
-            extrapolated_y = -1 * y;
-        }
-
-        debugC(`extr: x: ${extrapolated_x.toFixed(4)}`);
-        debugD(`extr: y: ${extrapolated_y.toFixed(4)}`);
-
-        let radius = 25;
-        let ctx = canvas.getContext("2d")!;
-        let center_x = extrapolated_x + canvas.width / 2;
-        let center_y = extrapolated_y + canvas.height / 2;
-        ctx.beginPath();
-        ctx.arc(center_x, center_y, radius, 0, Math.PI * 2, false);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = "#FF0000";
-        ctx.stroke();
-        ctx.closePath();
-
-        if (own_id === this.id) {
-            this.color = "#0099FF";
-        }
-        text(
-            center_x,
-            center_y - 50,
+        text(canvas,
+            this.position.x,
+            this.position.y + 50,
             `${this.velocity.x} | ${this.velocity.y}`,
         );
-        text(
-            center_x,
-            center_y - 100,
+        text(canvas,
+            this.position.x,
+            this.position.y + 100,
             `${this.position.x} | ${this.position.y}`,
         );
     }
 }
 
-function text(x: number, y: number, txt: string) {
-    let canvas = <HTMLCanvasElement>document.getElementById("ts-canvas");
+function text(canvas: HTMLCanvasElement, x: number, y: number, txt: string) {
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
     let ctx = canvas.getContext("2d")!;
+
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#000000";
-    ctx.fillText(txt, x, y);
+    ctx.fillText(txt, x_translated, y_translated);
+}
+
+function player(player: Player, canvas: HTMLCanvasElement) {
+    let [x_translated, y_translated] = world_to_canvas_coords(canvas, player.position.x, player.position.y);
+    let ctx = canvas.getContext("2d")!;
+
+    let radius = 25;
+    // circle(canvas, x_translated, y_translated, player.color, radius)
+    triangle(canvas, x_translated, y_translated, player.color, radius)
+}
+
+function circle(canvas: HTMLCanvasElement, x: number, y: number, color: string, radius: number) {
+    let ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = color;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#FF0000";
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+    ctx.closePath();
+    ctx.fill();
+    // ctx.stroke();
+}
+
+function triangle(canvas: HTMLCanvasElement, x: number, y: number, color: string, radius: number) {
+    let ctx = canvas.getContext("2d")!;
+
+    let sides = 3;
+    const angle = 2 * Math.PI / sides;
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#FF0000";
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+        ctx.lineTo(x + radius * Math.sin(angle * i + orientation), y + radius * Math.cos(angle * i + orientation));
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+function hex(canvas: HTMLCanvasElement, x: number, y: number, color: string, radius: number) {
+    let ctx = canvas.getContext("2d")!;
+
+    let sides = 6;
+    const a = 2 * Math.PI / sides;
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#FF0000";
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+        ctx.lineTo(x + radius * Math.sin(a * i), y + (-1 * radius * Math.cos(a * i)));
+    }
+    ctx.closePath();
+    ctx.fill();
+    // ctx.stroke();
+}
+
+function world_to_canvas_coords(canvas: HTMLCanvasElement, x: number, y: number): [number, number] {
+    let x_offset = x - camera.x;
+    let y_offset = -1 * (y - camera.y);
+
+    let x_translated = x_offset + canvas.width / 2;
+    let y_translated = y_offset + canvas.height / 2;
+
+    return [x_translated, y_translated];
 }
