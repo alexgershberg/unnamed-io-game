@@ -9,16 +9,25 @@ import {
     debug_textC,
     debug_textD,
     debugA,
+    debugC,
 } from "./debug";
 import { Player } from "./player";
 import { Position } from "./position";
+import { Entity } from "./entity";
+import { triangle } from "./util";
 
 let off_canvas: HTMLCanvasElement | null;
+let scale = 2.0; // https://stackoverflow.com/questions/50566991/increase-html5-canvas-resolution
 function resizeCanvas(canvas: HTMLCanvasElement) {
-    canvas.width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
-    canvas.height = window.innerHeight - 6;
+    let width = window.innerWidth - 6; // 6px is total border width 3px left + 3px right
+    let height = window.innerHeight - 6;
 
-    off_canvas = createGrid(canvas.width * 3, canvas.height * 3);
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    off_canvas = createGrid(width, height, scale);
 }
 
 function toggleFullscreen() {
@@ -44,12 +53,19 @@ function clearCanvas(
     ctx.clearRect(0, 0, width, height);
 }
 
-function createGrid(width: number, height: number): HTMLCanvasElement {
+function createGrid(
+    width: number,
+    height: number,
+    scale: number,
+): HTMLCanvasElement {
     let canvas = <HTMLCanvasElement>document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
 
-    let max = 990;
+    let max = 4000;
+    let max_length = max * 2;
+    canvas.width = max_length * scale;
+    canvas.height = max_length * scale;
+    canvas.style.width = max_length + "px";
+    canvas.style.height = max_length + "px";
 
     // Border
     dot(canvas, max, max, 3);
@@ -57,7 +73,7 @@ function createGrid(width: number, height: number): HTMLCanvasElement {
     dot(canvas, -max, max, 3);
     dot(canvas, -max, -max, 3);
 
-    let cell = 15;
+    let cell = 25;
     let cell_count = (max * 2) / cell;
     grid(canvas, cell_count, cell_count, cell);
     dot(canvas, 0, 0, 3);
@@ -80,6 +96,9 @@ function createGrid(width: number, height: number): HTMLCanvasElement {
         notch_y(canvas, 0, y * cell, notch_len);
     }
 
+    let [x_t, y_t] = world_to_canvas_coords(canvas, 150, 150);
+    triangle(canvas, x_t, y_t, "#0000FF", 60, Math.PI / 2);
+
     return canvas;
 }
 
@@ -101,22 +120,6 @@ function line(x: number, y: number) {
     ctx.stroke();
 }
 
-function box(canvas: HTMLCanvasElement, x: number, y: number, length: number) {
-    let ctx = canvas.getContext("2d")!;
-    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
-
-    ctx.lineWidth = 0.15;
-    ctx.strokeStyle = "lightgray";
-
-    ctx.beginPath();
-    ctx.moveTo(x_translated - length / 2, y_translated + length / 2);
-    ctx.lineTo(x_translated + length / 2, y_translated + length / 2);
-    ctx.lineTo(x_translated + length / 2, y_translated - length / 2);
-    ctx.lineTo(x_translated - length / 2, y_translated - length / 2);
-    ctx.lineTo(x_translated - length / 2, y_translated + length / 2);
-    ctx.stroke();
-}
-
 function grid(
     canvas: HTMLCanvasElement,
     rows: number,
@@ -128,9 +131,35 @@ function grid(
 
     for (let x = left; x < (cell * cols) / 2; x += cell) {
         for (let y = bot; y < (cell * rows) / 2; y += cell) {
-            box(canvas, x, y, cell);
+            let [x_translated, y_translated] = world_to_canvas_coords(
+                canvas,
+                x,
+                y,
+            );
+            gridBox(canvas, x_translated, y_translated, cell, 0.3);
         }
     }
+}
+
+function gridBox(
+    canvas: HTMLCanvasElement,
+    x: number,
+    y: number,
+    length: number,
+    line_width: number,
+) {
+    let ctx = canvas.getContext("2d")!;
+
+    ctx.lineWidth = line_width;
+    ctx.strokeStyle = "lightgray";
+
+    ctx.beginPath();
+    ctx.moveTo(x - length / 2, y + length / 2);
+    ctx.lineTo(x + length / 2, y + length / 2);
+    ctx.lineTo(x + length / 2, y - length / 2);
+    ctx.lineTo(x - length / 2, y - length / 2);
+    ctx.lineTo(x - length / 2, y + length / 2);
+    ctx.stroke();
 }
 
 function dotgrid(
@@ -267,9 +296,14 @@ function render(extrapolation: number) {
             y_mid - off_canvas.height / 2 + camera.y,
         );
     }
+
     drawDebug();
+
+    for (const [id, entity] of Object.entries(entities)) {
+        entity.render();
+    }
+
     for (const [id, player] of Object.entries(players)) {
-        // @ts-ignore
         player.render(extrapolation);
     }
 
@@ -301,7 +335,8 @@ function gameLoop() {
     window.requestAnimationFrame(gameLoop);
 }
 
-let players: any = {};
+let players: { [key: number]: Player } = {};
+let entities: { [key: number]: Entity } = {};
 let websocket: WebSocket | null = null;
 export let camera: Position = new Position();
 export let orientation: number = 0;
@@ -316,8 +351,9 @@ function connect(address: string) {
         let blob = event.data;
         let json = JSON.parse(blob);
         if (json.type == "handshake") {
-            handleHandshake(json.id);
+            handleId(json.id);
             handlePlayers(json.players);
+            handleEntities(json.entities);
         }
 
         if (json.type == "players") {
@@ -337,13 +373,14 @@ function connect(address: string) {
 }
 
 export let own_id: number = -1;
-function handleHandshake(id: number) {
+function handleId(id: number) {
     own_id = id;
 }
 
 function handlePlayers(plrs: any[]) {
     // console.log("got players")
     for (let p of plrs) {
+        console.log(p);
         let player;
         let new_player = !players[p.id];
         if (new_player) {
@@ -362,10 +399,25 @@ function handlePlayers(plrs: any[]) {
             player.color = "#0099FF";
             // camera = player.draw_position;
         } else {
-            player.color = "#FF9900";
+            player.color = "#ff0099";
+            player.server_orientation = p.orientation; // Ignore server orientation on "our" player, we've got the latest locally
         }
 
         player.tick();
+    }
+}
+
+function handleEntities(ents: any[]) {
+    console.log(ents);
+    for (let e of ents) {
+        let entity = new Entity();
+
+        entity.id = e.id;
+        entity.position = e.position;
+        entity.velocity = e.velocity;
+        entity.entity_type = e.entity_type;
+
+        entities[e.id] = entity;
     }
 }
 
@@ -375,17 +427,19 @@ function handleDisconnected(plrs: Player[]) {
     }
 }
 
-class KeyboardDirection {
+class Movement {
     up = false;
     left = false;
     right = false;
     down = false;
 }
 
-let keyboardDirection = new KeyboardDirection();
+let movement = new Movement();
 function sendInput() {
+    let request = JSON.stringify({ type: "movement", value: movement });
+    console.log(request);
     if (websocket) {
-        websocket.send(JSON.stringify(keyboardDirection));
+        websocket.send(request);
     }
 }
 function keyDownHandler(event: KeyboardEvent) {
@@ -395,27 +449,27 @@ function keyDownHandler(event: KeyboardEvent) {
 
     switch (event.key) {
         case "O":
-            // toggleFullscreen();
+            toggleFullscreen();
             return;
 
         case "W":
         case "w":
-            keyboardDirection.up = true;
+            movement.up = true;
             break;
 
         case "A":
         case "a":
-            keyboardDirection.left = true;
+            movement.left = true;
             break;
 
         case "D":
         case "d":
-            keyboardDirection.right = true;
+            movement.right = true;
             break;
 
         case "S":
         case "s":
-            keyboardDirection.down = true;
+            movement.down = true;
             break;
         case "L":
         case "l":
@@ -424,6 +478,7 @@ function keyDownHandler(event: KeyboardEvent) {
         default:
             return;
     }
+    debugC(`scale: ${scale}`);
 
     sendInput();
 }
@@ -436,22 +491,22 @@ function keyUpHandler(event: KeyboardEvent) {
     switch (event.key) {
         case "W":
         case "w":
-            keyboardDirection.up = false;
+            movement.up = false;
             break;
 
         case "A":
         case "a":
-            keyboardDirection.left = false;
+            movement.left = false;
             break;
 
         case "D":
         case "d":
-            keyboardDirection.right = false;
+            movement.right = false;
             break;
 
         case "S":
         case "s":
-            keyboardDirection.down = false;
+            movement.down = false;
             break;
         default:
             return;
@@ -472,18 +527,23 @@ function main() {
     connect(address);
     window.addEventListener("keydown", keyDownHandler);
     window.addEventListener("keyup", keyUpHandler);
+    onmousemove = (event) => {
+        let height = window.innerHeight;
+        let width = window.innerWidth;
+
+        let x = event.x - width / 2;
+        let y = -1 * (event.y - height / 2);
+
+        orientation = Math.atan2(y, x);
+
+        if (websocket) {
+            websocket.send(
+                JSON.stringify({ type: "orientation", value: orientation }),
+            );
+        }
+    };
 
     window.requestAnimationFrame(gameLoop);
 }
-
-onmousemove = (event) => {
-    let height = window.innerHeight;
-    let width = window.innerWidth;
-
-    let x = event.x - width / 2;
-    let y = -1 * (event.y - height / 2);
-
-    orientation = Math.atan(y / x);
-};
 
 window.onload = main;

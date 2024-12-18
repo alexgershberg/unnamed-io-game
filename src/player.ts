@@ -1,5 +1,6 @@
 import { Position } from "./position";
-import { camera, FPS, orientation, own_id } from "./index";
+import { camera, orientation, own_id } from "./index";
+import { box, text, triangle, world_to_canvas_coords } from "./util";
 
 export class Velocity {
     x: number;
@@ -17,9 +18,11 @@ export class Player {
     draw_position: Position = new Position();
     server_position: Position = new Position();
     velocity = new Velocity();
-    orientation: number = 0;
+    draw_orientation: number = 0;
+    server_orientation: number = 0;
     x_delta: number = 0;
     y_delta: number = 0;
+    orientation_delta: number = 0;
 
     constructor() {}
 
@@ -32,6 +35,8 @@ export class Player {
         if (this.id === own_id) {
             camera.x = this.draw_position.x;
             camera.y = this.draw_position.y;
+
+            this.draw_orientation = orientation;
         }
 
         player(this, canvas);
@@ -48,6 +53,12 @@ export class Player {
             this.draw_position.y + 100,
             `${this.server_position.x} | ${this.server_position.y}`,
         );
+        text(
+            canvas,
+            this.draw_position.x,
+            this.draw_position.y - 30,
+            `${this.id}`,
+        );
     }
 
     tick() {
@@ -57,9 +68,12 @@ export class Player {
 
         this.x_delta = (this.server_position.x - this.draw_position.x) / 5;
         this.y_delta = (this.server_position.y - this.draw_position.y) / 5;
+        this.orientation_delta =
+            (this.server_orientation - this.draw_orientation) / 5;
     }
 
     interpolate() {
+        // this.draw_position = this.server_position;
         if (Math.sign(this.x_delta) === 1) {
             this.draw_position.x = Math.min(
                 this.draw_position.x + this.x_delta,
@@ -83,18 +97,19 @@ export class Player {
                 this.server_position.y,
             );
         }
+
+        if (Math.sign(this.orientation_delta) === 1) {
+            this.draw_orientation = Math.min(
+                this.draw_orientation + this.orientation_delta,
+                this.server_orientation,
+            );
+        } else {
+            this.draw_orientation = Math.max(
+                this.draw_orientation + this.orientation_delta,
+                this.server_orientation,
+            );
+        }
     }
-}
-
-function text(canvas: HTMLCanvasElement, x: number, y: number, txt: string) {
-    let [x_translated, y_translated] = world_to_canvas_coords(canvas, x, y);
-    let ctx = canvas.getContext("2d")!;
-
-    ctx.textAlign = "center";
-    ctx.font = "20px Cascadia Code";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#000000";
-    ctx.fillText(txt, x_translated, y_translated);
 }
 
 function player(player: Player, canvas: HTMLCanvasElement) {
@@ -105,98 +120,65 @@ function player(player: Player, canvas: HTMLCanvasElement) {
     );
     let ctx = canvas.getContext("2d")!;
 
-    // let radius = 25;
-    let radius = 15;
+    let radius = 45;
+    // let radius = 15;
     // circle(canvas, x_translated, y_translated, player.color, radius)
-    triangle(canvas, x_translated, y_translated, player.color, radius);
+    triangle(
+        canvas,
+        x_translated,
+        y_translated,
+        player.color,
+        radius,
+        player.draw_orientation,
+    );
+    boundingBox(player, canvas);
 }
 
-function circle(
-    canvas: HTMLCanvasElement,
-    x: number,
-    y: number,
-    color: string,
-    radius: number,
-) {
-    let ctx = canvas.getContext("2d")!;
+function boundingBox(player: Player, canvas: HTMLCanvasElement) {
+    // let orientation = player.orientation TODO: Stop using orientation global variable
 
-    ctx.fillStyle = color;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "#FF0000";
+    let [x_translated, y_translated] = world_to_canvas_coords(
+        canvas,
+        player.draw_position.x,
+        player.draw_position.y,
+    );
 
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2, false);
-    ctx.closePath();
-    ctx.fill();
-    // ctx.stroke();
-}
-
-function triangle(
-    canvas: HTMLCanvasElement,
-    x: number,
-    y: number,
-    color: string,
-    radius: number,
-) {
-    let ctx = canvas.getContext("2d")!;
+    let x_max = -Infinity;
+    let x_min = Infinity;
+    let y_max = -Infinity;
+    let y_min = Infinity;
 
     let sides = 3;
+    let radius = 45;
     const angle = (2 * Math.PI) / sides;
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#666666";
-    ctx.fillStyle = color;
-
-    ctx.beginPath();
+    // calculate min and max points for the box
     for (let i = 0; i < sides; i++) {
-        ctx.lineTo(
-            x + radius * Math.sin(angle * i + orientation),
-            y + radius * Math.cos(angle * i + orientation),
-        );
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-}
+        let x =
+            x_translated +
+            radius * Math.cos(angle * i - player.draw_orientation);
+        x_max = Math.max(x_max, x);
+        x_min = Math.min(x_min, x);
 
-function hex(
-    canvas: HTMLCanvasElement,
-    x: number,
-    y: number,
-    color: string,
-    radius: number,
-) {
+        let y =
+            y_translated +
+            radius * Math.sin(angle * i - player.draw_orientation);
+        y_max = Math.max(y_max, y);
+        y_min = Math.min(y_min, y);
+    }
+
+    // draw the box
     let ctx = canvas.getContext("2d")!;
 
-    let sides = 6;
-    const angle = (2 * Math.PI) / sides;
-
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "#FF0000";
-    ctx.fillStyle = color;
+    ctx.strokeStyle = "#000000";
 
     ctx.beginPath();
-    for (let i = 0; i < sides; i++) {
-        ctx.lineTo(
-            x + radius * Math.sin(angle * i),
-            y + -1 * radius * Math.cos(angle * i),
-        );
-    }
+    ctx.moveTo(x_min, y_max);
+    ctx.lineTo(x_max, y_max);
+    ctx.lineTo(x_max, y_min);
+    ctx.lineTo(x_min, y_min);
+    ctx.lineTo(x_min, y_max);
     ctx.closePath();
-    ctx.fill();
-    // ctx.stroke();
-}
-
-function world_to_canvas_coords(
-    canvas: HTMLCanvasElement,
-    x: number,
-    y: number,
-): [number, number] {
-    let x_offset = x - camera.x;
-    let y_offset = -1 * (y - camera.y);
-
-    let x_translated = x_offset + canvas.width / 2;
-    let y_translated = y_offset + canvas.height / 2;
-
-    return [x_translated, y_translated];
+    ctx.stroke();
 }

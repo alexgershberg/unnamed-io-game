@@ -2,9 +2,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "bunx webpack --config=webpack.config.cjs --mode=development",
-        "serve": "bunx webpack serve --config=webpack.config.cjs --mode=development",
-        "fmt": "bunx prettier . --write"
+        "build": "npx webpack --config=webpack.config.cjs --mode=development",
+        "serve": "npx webpack serve --config=webpack.config.cjs --mode=development",
+        "fmt": "npx prettier . --write"
     },
     "devDependencies": {
         "@types/bun": "^1.1.12",
