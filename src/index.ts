@@ -67,6 +67,9 @@ function createGrid(
     canvas.style.width = max_length + "px";
     canvas.style.height = max_length + "px";
 
+    dot(canvas, 0, 250, 3);
+    dot(canvas, 250, 0, 3);
+
     // Border
     dot(canvas, max, max, 3);
     dot(canvas, max, -max, 3);
@@ -242,7 +245,7 @@ function world_to_canvas_coords(
     //
     // return [x_translated, y_translated];
 
-    return [x + canvas.width / 2, y + canvas.height / 2];
+    return [x + canvas.width / 2, (- 1 * y) + canvas.height / 2];
 }
 
 function drawDebug() {
@@ -437,10 +440,7 @@ class Movement {
 let movement = new Movement();
 function sendInput() {
     let request = JSON.stringify({ type: "movement", value: movement });
-    console.log(request);
-    if (websocket) {
-        websocket.send(request);
-    }
+    send(request)
 }
 function keyDownHandler(event: KeyboardEvent) {
     if (event.repeat) {
@@ -536,14 +536,20 @@ function main() {
 
         orientation = Math.atan2(y, x);
 
-        if (websocket) {
-            websocket.send(
-                JSON.stringify({ type: "orientation", value: orientation }),
-            );
-        }
+        let request = JSON.stringify({ type: "orientation", value: orientation })
+        send(request)
     };
 
     window.requestAnimationFrame(gameLoop);
 }
+
+function send(msg: any) {
+    if (websocket) {
+        if (websocket.readyState == websocket.OPEN) {
+            websocket.send(msg);
+        }
+    }
+}
+
 
 window.onload = main;
