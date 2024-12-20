@@ -245,7 +245,7 @@ function world_to_canvas_coords(
     //
     // return [x_translated, y_translated];
 
-    return [x + canvas.width / 2, (- 1 * y) + canvas.height / 2];
+    return [x + canvas.width / 2, -1 * y + canvas.height / 2];
 }
 
 function drawDebug() {
@@ -381,9 +381,7 @@ function handleId(id: number) {
 }
 
 function handlePlayers(plrs: any[]) {
-    // console.log("got players")
     for (let p of plrs) {
-        console.log(p);
         let player;
         let new_player = !players[p.id];
         if (new_player) {
@@ -411,7 +409,6 @@ function handlePlayers(plrs: any[]) {
 }
 
 function handleEntities(ents: any[]) {
-    console.log(ents);
     for (let e of ents) {
         let entity = new Entity();
 
@@ -440,7 +437,7 @@ class Movement {
 let movement = new Movement();
 function sendInput() {
     let request = JSON.stringify({ type: "movement", value: movement });
-    send(request)
+    send(request);
 }
 function keyDownHandler(event: KeyboardEvent) {
     if (event.repeat) {
@@ -534,10 +531,17 @@ function main() {
         let x = event.x - width / 2;
         let y = -1 * (event.y - height / 2);
 
-        orientation = Math.atan2(y, x);
+        let angle = Math.atan2(y, x);
+        if (angle < 0.0) {
+            angle += 2.0 * Math.PI; // Normalize between 0 and 2PI
+        }
+        orientation = angle;
 
-        let request = JSON.stringify({ type: "orientation", value: orientation })
-        send(request)
+        let request = JSON.stringify({
+            type: "orientation",
+            value: orientation,
+        });
+        send(request);
     };
 
     window.requestAnimationFrame(gameLoop);
@@ -550,6 +554,5 @@ function send(msg: any) {
         }
     }
 }
-
 
 window.onload = main;

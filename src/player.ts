@@ -56,20 +56,23 @@ export class Player {
         text(
             canvas,
             this.draw_position.x,
+            this.draw_position.y + 150,
+            `${this.draw_orientation} | ${this.orientation_delta}`,
+        );
+        text(
+            canvas,
+            this.draw_position.x,
             this.draw_position.y - 30,
             `${this.id}`,
         );
     }
 
     tick() {
-        if (this.id === own_id) {
-            console.log("tick");
-        }
-
         this.x_delta = (this.server_position.x - this.draw_position.x) / 5;
         this.y_delta = (this.server_position.y - this.draw_position.y) / 5;
+
         this.orientation_delta =
-            (this.server_orientation - this.draw_orientation) / 5;
+            angle_delta(this.draw_orientation, this.server_orientation) / 5;
     }
 
     interpolate() {
@@ -98,15 +101,11 @@ export class Player {
             );
         }
 
-        if (Math.sign(this.orientation_delta) === 1) {
-            this.draw_orientation = Math.min(
-                this.draw_orientation + this.orientation_delta,
+        if (this.id !== own_id) {
+            this.draw_orientation = change_angle(
+                this.draw_orientation,
                 this.server_orientation,
-            );
-        } else {
-            this.draw_orientation = Math.max(
-                this.draw_orientation + this.orientation_delta,
-                this.server_orientation,
+                this.orientation_delta,
             );
         }
     }
@@ -181,4 +180,33 @@ function boundingBox(player: Player, canvas: HTMLCanvasElement) {
     ctx.lineTo(x_min, y_max);
     ctx.closePath();
     ctx.stroke();
+}
+
+function angle_delta(angle1: number, angle2: number): number {
+    let diff = ((angle2 - angle1 + Math.PI) % (2.0 * Math.PI)) - Math.PI;
+    return diff < -Math.PI ? diff + 2.0 * Math.PI : diff;
+}
+
+function change_angle(origin: number, target: number, delta: number): number {
+    let new_val = (origin + delta) % (2.0 * Math.PI);
+    if (Math.sign(delta) === 1.0) {
+        let wrap = origin > Math.PI && target <= Math.PI;
+        if (wrap) {
+            let target_adjusted = target + 2.0 * Math.PI;
+            new_val = Math.min(new_val, target_adjusted);
+        } else {
+            new_val = Math.min(new_val, target);
+        }
+    } else {
+        let wrap = origin <= Math.PI && target > Math.PI;
+        if (wrap) {
+            let target_adjusted = target - 2.0 * Math.PI;
+            new_val = Math.max(new_val, target_adjusted);
+            new_val += 2.0 * Math.PI;
+        } else {
+            new_val = Math.max(new_val, target);
+        }
+    }
+
+    return new_val;
 }
