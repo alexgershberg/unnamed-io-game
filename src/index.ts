@@ -367,6 +367,11 @@ function connect(address: string) {
             handleDisconnected(json.players);
         }
 
+        if (json.type == "entities") {
+            console.log(json);
+            handleEntities(json.entities);
+        }
+
         reset_last_tick();
     };
 
@@ -410,14 +415,22 @@ function handlePlayers(plrs: any[]) {
 
 function handleEntities(ents: any[]) {
     for (let e of ents) {
-        let entity = new Entity();
+        let entity;
+        let new_entity = !entities[e.id];
+        if (new_entity) {
+            entity = new Entity();
+            entities[e.id] = entity;
+        } else {
+            entity = entities[e.id];
+        }
 
         entity.id = e.id;
         entity.position = e.position;
         entity.velocity = e.velocity;
         entity.entity_type = e.entity_type;
+        entity.server_orientation = e.orientation;
 
-        entities[e.id] = entity;
+        entity.tick();
     }
 }
 

@@ -1,6 +1,12 @@
 import { Position } from "./position";
 import { camera, orientation, own_id } from "./index";
-import { box, text, triangle, world_to_canvas_coords } from "./util";
+import {
+    boundingBox,
+    box,
+    text,
+    triangle,
+    world_to_canvas_coords,
+} from "./util";
 
 export class Velocity {
     x: number;
@@ -70,7 +76,6 @@ export class Player {
     tick() {
         this.x_delta = (this.server_position.x - this.draw_position.x) / 5;
         this.y_delta = (this.server_position.y - this.draw_position.y) / 5;
-
         this.orientation_delta =
             angle_delta(this.draw_orientation, this.server_orientation) / 5;
     }
@@ -130,64 +135,19 @@ function player(player: Player, canvas: HTMLCanvasElement) {
         radius,
         player.draw_orientation,
     );
-    boundingBox(player, canvas);
+    boundingBox(3, 45, player.draw_position, player.draw_orientation, canvas);
 }
 
-function boundingBox(player: Player, canvas: HTMLCanvasElement) {
-    // let orientation = player.orientation TODO: Stop using orientation global variable
-
-    let [x_translated, y_translated] = world_to_canvas_coords(
-        canvas,
-        player.draw_position.x,
-        player.draw_position.y,
-    );
-
-    let x_max = -Infinity;
-    let x_min = Infinity;
-    let y_max = -Infinity;
-    let y_min = Infinity;
-
-    let sides = 3;
-    let radius = 45;
-    const angle = (2 * Math.PI) / sides;
-
-    // calculate min and max points for the box
-    for (let i = 0; i < sides; i++) {
-        let x =
-            x_translated +
-            radius * Math.cos(angle * i - player.draw_orientation);
-        x_max = Math.max(x_max, x);
-        x_min = Math.min(x_min, x);
-
-        let y =
-            y_translated +
-            radius * Math.sin(angle * i - player.draw_orientation);
-        y_max = Math.max(y_max, y);
-        y_min = Math.min(y_min, y);
-    }
-
-    // draw the box
-    let ctx = canvas.getContext("2d")!;
-
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "#000000";
-
-    ctx.beginPath();
-    ctx.moveTo(x_min, y_max);
-    ctx.lineTo(x_max, y_max);
-    ctx.lineTo(x_max, y_min);
-    ctx.lineTo(x_min, y_min);
-    ctx.lineTo(x_min, y_max);
-    ctx.closePath();
-    ctx.stroke();
-}
-
-function angle_delta(angle1: number, angle2: number): number {
+export function angle_delta(angle1: number, angle2: number): number {
     let diff = ((angle2 - angle1 + Math.PI) % (2.0 * Math.PI)) - Math.PI;
     return diff < -Math.PI ? diff + 2.0 * Math.PI : diff;
 }
 
-function change_angle(origin: number, target: number, delta: number): number {
+export function change_angle(
+    origin: number,
+    target: number,
+    delta: number,
+): number {
     let new_val = (origin + delta) % (2.0 * Math.PI);
     if (Math.sign(delta) === 1.0) {
         let wrap = origin > Math.PI && target <= Math.PI;
