@@ -8,13 +8,13 @@ import {
     world_to_canvas_coords,
 } from "./util";
 
-export class Entity {
+export class Polygon {
     id: number = -1;
     draw_orientation: number = 0;
     server_orientation: number = 0;
     position: Position = new Position();
     velocity: Velocity = new Velocity();
-    entity_type: "box" | "hexagon" = "box";
+    shape: "square" | "hexagon" = "square";
     orientation_delta: number = 0;
 
     constructor() {}
@@ -23,7 +23,7 @@ export class Entity {
 
         this.interpolate();
 
-        entity(this, canvas);
+        polygon(this, canvas);
         text(
             canvas,
             this.position.x,
@@ -32,7 +32,7 @@ export class Entity {
         );
         text(canvas, this.position.x, this.position.y - 50, `${this.id}`);
 
-        let sides = this.entity_type === "box" ? 4 : 5;
+        let sides = this.shape === "square" ? 4 : 5;
         let radius = 50;
         boundingBox(
             sides,
@@ -57,16 +57,16 @@ export class Entity {
     }
 }
 
-function entity(entity: Entity, canvas: HTMLCanvasElement) {
+function polygon(polygon: Polygon, canvas: HTMLCanvasElement) {
     let [x, y] = world_to_canvas_coords(
         canvas,
-        entity.position.x,
-        entity.position.y,
+        polygon.position.x,
+        polygon.position.y,
     );
 
     let line_width = 2;
-    switch (entity.entity_type) {
-        case "box":
+    switch (polygon.shape) {
+        case "square":
             box(
                 canvas,
                 x,
@@ -75,7 +75,7 @@ function entity(entity: Entity, canvas: HTMLCanvasElement) {
                 "#550074",
                 50,
                 line_width,
-                entity.draw_orientation,
+                polygon.draw_orientation,
             );
             break;
         case "hexagon":
@@ -87,7 +87,7 @@ function entity(entity: Entity, canvas: HTMLCanvasElement) {
                 "#a26200",
                 50,
                 line_width,
-                entity.draw_orientation,
+                polygon.draw_orientation,
             );
             break;
         default:

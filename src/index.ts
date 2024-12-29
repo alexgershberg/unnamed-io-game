@@ -13,7 +13,7 @@ import {
 } from "./debug";
 import { Player } from "./player";
 import { Position } from "./position";
-import { Entity } from "./entity";
+import { Polygon } from "./polygon";
 import { triangle } from "./util";
 
 let off_canvas: HTMLCanvasElement | null;
@@ -302,8 +302,8 @@ function render(extrapolation: number) {
 
     drawDebug();
 
-    for (const [id, entity] of Object.entries(entities)) {
-        entity.render();
+    for (const [id, polygon] of Object.entries(polygons)) {
+        polygon.render();
     }
 
     for (const [id, player] of Object.entries(players)) {
@@ -339,7 +339,7 @@ function gameLoop() {
 }
 
 let players: { [key: number]: Player } = {};
-let entities: { [key: number]: Entity } = {};
+let polygons: { [key: number]: Polygon } = {};
 let websocket: WebSocket | null = null;
 export let camera: Position = new Position();
 export let orientation: number = 0;
@@ -356,7 +356,7 @@ function connect(address: string) {
         if (json.type == "handshake") {
             handleId(json.id);
             handlePlayers(json.players);
-            handleEntities(json.entities);
+            handlePolygons(json.polygons);
         }
 
         if (json.type == "players") {
@@ -367,9 +367,9 @@ function connect(address: string) {
             handleDisconnected(json.players);
         }
 
-        if (json.type == "entities") {
+        if (json.type == "polygons") {
             console.log(json);
-            handleEntities(json.entities);
+            handlePolygons(json.polygons);
         }
 
         reset_last_tick();
@@ -413,24 +413,24 @@ function handlePlayers(plrs: any[]) {
     }
 }
 
-function handleEntities(ents: any[]) {
-    for (let e of ents) {
-        let entity;
-        let new_entity = !entities[e.id];
-        if (new_entity) {
-            entity = new Entity();
-            entities[e.id] = entity;
+function handlePolygons(plgns: any[]) {
+    for (let p of plgns) {
+        let polygon;
+        let new_polygon = !polygons[p.id];
+        if (new_polygon) {
+            polygon = new Polygon();
+            polygons[p.id] = polygon;
         } else {
-            entity = entities[e.id];
+            polygon = polygons[p.id];
         }
 
-        entity.id = e.id;
-        entity.position = e.position;
-        entity.velocity = e.velocity;
-        entity.entity_type = e.entity_type;
-        entity.server_orientation = e.orientation;
+        polygon.id = p.id;
+        polygon.position = p.position;
+        polygon.velocity = p.velocity;
+        polygon.shape = p.shape;
+        polygon.server_orientation = p.orientation;
 
-        entity.tick();
+        polygon.tick();
     }
 }
 
@@ -533,7 +533,7 @@ function main() {
     });
 
     resizeCanvas(canvas);
-    let address = "ws://192.168.0.169:10001";
+    let address = "ws://127.0.0.1:10001";
     connect(address);
     window.addEventListener("keydown", keyDownHandler);
     window.addEventListener("keyup", keyUpHandler);
